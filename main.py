@@ -2,6 +2,9 @@ from collections import UserDict
 import re
 
 class PhoneValidationError(Exception):
+     """
+     Custom exception. Phone validation
+     """
      def __init__(self, message="Phone should contain 10 numbers."):
         self.message = message
         super().__init__(self.message)
@@ -23,25 +26,23 @@ class Phone(Field):
         if re.match(pattern,phone_number) is None:
              raise PhoneValidationError()
 
-    
-              
-
+  
 class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
 
-    def add_phone(self,phone_number):
+    def add_phone(self,phone_number:str)->None:
          
          try:
-              Phone.verify_phone(self,phone_number)
-              self.phones.append(Phone(phone_number))
+              Phone.verify_phone(self,phone_number) #verify phone
+              self.phones.append(Phone(phone_number)) # append to phones list if correct
          except PhoneValidationError as e:
               print (f"Error: {e}. Please try again.")
 
-    def find_phone(self,phone:str)->Phone:
+    def find_phone(self,phone_number:str)->Phone:
         for p in self.phones:
-             if p.value == phone:
+             if p.value == phone_number:
                   return p
              
     def edit_phone(self,old_phone:str,new_phone:str)->None:
@@ -64,7 +65,7 @@ class Record:
 
 class AddressBook(UserDict):
     
-    def add_record(self,record:Record):
+    def add_record(self,record:Record)->None:
          self.data[record.name.value] = record
     
     def find(self,name:str)->Record:
