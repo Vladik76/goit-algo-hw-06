@@ -9,6 +9,14 @@ class PhoneValidationError(Exception):
         self.message = message
         super().__init__(self.message)
 
+class NotUniquePhoneError(Exception):
+    """
+    Error when phone is not unique
+    """
+    def __init__(self, message="The phone number already exists"):
+        self.message = message
+        super().__init__(self.message)
+
 class Field:
     def __init__(self, value):
         self.value = value
@@ -20,11 +28,14 @@ class Name(Field):
 	pass
 
 class Phone(Field):
+    def __init__(self, value):
+        if not self.verify_phone(value):
+            raise PhoneValidationError()
+        super().__init__(value)
 
-    def verify_phone(self,phone_number):
+    def verify_phone(self,phone_number)->bool:
         pattern = r"^[0-9]{10}$"
-        if re.match(pattern,phone_number) is None:
-             raise PhoneValidationError()
+        return re.match(pattern,phone_number) is not None
 
   
 class Record:
@@ -32,32 +43,54 @@ class Record:
         self.name = Name(name)
         self.phones = []
 
-    def add_phone(self,phone_number:str)->None:
-         
-         try:
-              Phone.verify_phone(self,phone_number) #verify phone
-              self.phones.append(Phone(phone_number)) # append to phones list if correct
-         except PhoneValidationError as e:
-              print (f"Error: {e}. Please try again.")
-
     def find_phone(self,phone_number:str)->Phone:
+
         for p in self.phones:
-             if p.value == phone_number:
-                  return p
-             
-    def edit_phone(self,old_phone:str,new_phone:str)->None:
-        
-        for index, phone in enumerate(self.phones):
-            if phone.value == old_phone:
-                self.phones[index] = Phone(new_phone)
-
-    def remove_phone(self,phone:str)->None:
-         
-        found_phone = self.find_phone(phone)
-
-        if found_phone:
-            self.phones.remove(found_phone)
+            if p.value == phone_number:
+                return p
     
+    def check_duplicate(self,phone_number:str)->Phone:
+        """
+        Checks if passed phone number already in list of Phones
+        Returns Phone if phone_number does not exists otherwise raise exception NotUniquePhoneError
+        """
+        phone=Phone(phone_number)
+
+        if phone in self.phones:
+            raise NotUniquePhoneError
+        else:
+            return phone
+
+    def add_phone(self,phone_number:str)->str:
+        """
+        Add phone
+
+        Function raises: 
+        PhoneValidationError exception if new phone number is incorrect
+        NotUniquePhoneError exception if new phone already in list of phones
+        """
+        self.phones.append(self.check_duplicate(phone_number)) # append to phones list if correct. Oterwise, raise an Exception
+
+    def edit_phone(self,old_phone_number:str,new_phone_number:str)->None:
+        """
+        Edit phone
+
+        Function raises: 
+        ValueError exception if phone is not in list
+        PhoneValidationError exception if new phone number is incorrect
+        NotUniquePhoneError exception if new phone already in list of phones
+        """
+        self.phones[self.phones.index(self.find_phone(old_phone_number))] = self.check_duplicate(new_phone_number)
+
+    def remove_phone(self,phone_number:str)->None:
+        """
+        Remove phone from the list of phones
+
+        Function raises: 
+        ValueError exception if phone is not in list
+        PhoneValidationError exception if new phone number is incorrect
+        """
+        self.phones.remove(self.find_phone(phone_number))
     
 
     def __str__(self):
@@ -66,14 +99,24 @@ class Record:
 class AddressBook(UserDict):
     
     def add_record(self,record:Record)->None:
-         self.data[record.name.value] = record
+        """
+        Add Record to Address book
+        Raises ValueError exception if record already exists.
+        """
+        if record.name.value not in self.data.keys():
+            self.data[record.name.value] = record
+        else:
+            raise ValueError(f"The Record {record.name} already exists.")
+        
     
     def find(self,name:str)->Record:
          return self.data.get(name,None)
 
     def delete(self,name:str)->None:
-        if name in self.data.keys():
-            del self.data[name]
+        """
+        Raises KeyError if record does not exist
+        """
+        del self.data[name]
 
 
 
@@ -91,6 +134,9 @@ book.add_record(john_record)
 jane_record = Record("Jane")
 jane_record.add_phone("9876543210")
 book.add_record(jane_record)
+
+for name, record in book.data.items():
+     print(record)
 
 john = book.find("John")
 print(john)
